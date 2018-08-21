@@ -37,6 +37,7 @@ public class KeychainModule extends ReactContextBaseJavaModule {
 
     private final Map<String, CipherStorage> cipherStorageMap = new HashMap<>();
     private final PrefsStorage prefsStorage;
+    private final String namespace;
 
     @Override
     public String getName() {
@@ -44,8 +45,13 @@ public class KeychainModule extends ReactContextBaseJavaModule {
     }
 
     public KeychainModule(ReactApplicationContext reactContext) {
+        this(reactContext, EMPTY_STRING);
+    }
+
+    public KeychainModule(ReactApplicationContext reactContext, String namespace) {
         super(reactContext);
         prefsStorage = new PrefsStorage(reactContext);
+        this.namespace = namespace == null ? EMPTY_STRING : namespace;
 
         addCipherStorageToMap(new CipherStorageFacebookConceal(reactContext));
         addCipherStorageToMap(new CipherStorageKeystoreAESCBC());
@@ -61,7 +67,7 @@ public class KeychainModule extends ReactContextBaseJavaModule {
             if (username == null || username.isEmpty() || password == null || password.isEmpty()) {
                 throw new EmptyParameterException("you passed empty or null username/password");
             }
-            service = getDefaultServiceIfNull(service);
+            service = getServiceWithNamespace(getDefaultServiceIfNull(service));
 
             CipherStorage currentCipherStorage = getCipherStorageForCurrentAPILevel();
 
@@ -81,7 +87,7 @@ public class KeychainModule extends ReactContextBaseJavaModule {
     @ReactMethod
     public void getGenericPasswordForOptions(String service, Promise promise) {
         try {
-            service = getDefaultServiceIfNull(service);
+            service = getServiceWithNamespace(getDefaultServiceIfNull(service));
 
             CipherStorage currentCipherStorage = getCipherStorageForCurrentAPILevel();
 
@@ -129,7 +135,7 @@ public class KeychainModule extends ReactContextBaseJavaModule {
     @ReactMethod
     public void resetGenericPasswordForOptions(String service, Promise promise) {
         try {
-            service = getDefaultServiceIfNull(service);
+            service = getServiceWithNamespace(getDefaultServiceIfNull(service));
 
             // First we clean up the cipher storage (using the cipher storage that was used to store the entry)
             ResultSet resultSet = prefsStorage.getEncryptedEntry(service);
@@ -209,5 +215,9 @@ public class KeychainModule extends ReactContextBaseJavaModule {
     @NonNull
     private String getDefaultServiceIfNull(String service) {
         return service == null ? EMPTY_STRING : service;
+    }
+
+    private String getServiceWithNamespace(String service) {
+        return namespace + service;
     }
 }
